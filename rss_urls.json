@@ -1,0 +1,29 @@
+{
+    "world": [
+        "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+        "http://feeds.bbci.co.uk/news/world/rss.xml",
+        "https://www.aljazeera.com/xml/rss/all.xml"
+    ],
+    "business": [
+        "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        "https://www.marketwatch.com/rss/topstories",
+        "https://www.ft.com/?format=rss"
+    ],
+    "technology": [
+        "https://www.theverge.com/rss/index.xml",
+        "https://www.wired.com/feed/rss",
+        "https://techcrunch.com/feed/",
+        "https://www.engadget.com/rss.xml"
+    ],
+    "science": [
+        "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml",
+        "https://www.livescience.com/feeds/all",
+        "https://www.nationalgeographic.com/content/natgeo/en_us/science/_jcr_content/content/feed.rss",
+        "https://rss.sciam.com/ScientificAmerican-Global",
+        "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+        "https://www.newscientist.com/feed/home",
+        "https://www.popsci.com/rss.xml",
+        "https://www.nature.com/nature/articles?type=research&format=rss",
+        "https://www.sciencedaily.com/rss/top/science.xml"
+    ]
+}

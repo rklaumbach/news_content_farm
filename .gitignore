@@ -1,0 +1,22 @@
+# Ignore Python cache files
+__pycache__/
+
+# Ignore resource directories
+article_images/
+fonts/
+output/
+raw_videos/
+stock_videos/
+srt/
+
+# Ignore specific resource files
+background_music_business.mp3
+background_music_technology.mp3
+background_music_world.mp3
+openai_key.txt
+temp-audio.m4a
+
+# Ignore any other resource files
+*.mp3
+*.m4a
+*.srt
