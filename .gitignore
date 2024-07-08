@@ -8,6 +8,7 @@ output/
 raw_videos/
 stock_videos/
 srt/
+news_content_farm/
 
 # Ignore specific resource files
 background_music_business.mp3

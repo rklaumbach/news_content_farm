@@ -1,11 +1,12 @@
 import os
 import random
 import argparse
-from PIL import Image
+from datetime import datetime
+from PIL import Image, UnidentifiedImageError
 import numpy as np
 from moviepy.editor import (
     VideoFileClip, concatenate_videoclips, ImageClip, TextClip, CompositeVideoClip,
-    AudioFileClip, CompositeAudioClip, vfx, AudioClip
+    AudioFileClip, CompositeAudioClip, vfx, AudioClip, concatenate_audioclips
 )
 import pysrt
 import pandas as pd
@@ -19,86 +20,53 @@ os.environ["FFMPEG_BINARY"] = "/usr/local/bin/ffmpeg"
 # Set the font path to the local Montserrat-Bold font
 FONT_PATH = 'fonts/Montserrat-Bold.ttf'
 
-def load_subtitles(srt_file, max_words=7):
+def load_subtitles(srt_file):
     subs = pysrt.open(srt_file)
     captions = []
 
     for sub in subs:
         start = sub.start.hours * 3600 + sub.start.minutes * 60 + sub.start.seconds + sub.start.milliseconds / 1000.0
         end = sub.end.hours * 3600 + sub.end.minutes * 60 + sub.end.seconds + sub.end.milliseconds / 1000.0
-        sub_texts = split_subtitle_text(sub.text, max_words)
-        duration_per_chunk = (end - start) / len(sub_texts)
-
-        for i, text in enumerate(sub_texts):
-            chunk_start = start + i * duration_per_chunk
-            chunk_end = chunk_start + duration_per_chunk
-            captions.append({
-                'start': chunk_start,
-                'end': chunk_end,
-                'text': text
-            })
+        captions.append({
+            'start': start,
+            'end': end,
+            'text': sub.text
+        })
 
     return captions
 
-def split_subtitle_text(sub_text, max_words=7):
-    words = sub_text.split()
-    split_text = []
-    current_chunk = []
-
-    for word in words:
-        current_chunk.append(word)
-        if len(current_chunk) >= max_words:
-            split_text.append(" ".join(current_chunk))
-            current_chunk = []
-
-    if current_chunk:
-        split_text.append(" ".join(current_chunk))
-
-    return split_text
-
-def create_caption_clips(caption, clip_size, font_path=FONT_PATH, fontsize=96, emphasis_fontsize=128, color='white', emphasis_color='yellow', stroke_color='black', stroke_width=4):
+def create_caption_clips(caption, clip_size, font_path=FONT_PATH, fontsize=96, color='white', stroke_color='black', stroke_width=4):
     words = caption['text'].split()
     duration_per_word = (caption['end'] - caption['start']) / len(words)
     clips = []
 
     for i in range(len(words)):
-        # Create the clip for the current text without the last word
-        if i > 0:
-            preceding_text = " ".join(words[:i])
-            preceding_clip = TextClip(
-                preceding_text,
-                font=font_path,
-                fontsize=fontsize,
-                color=color,
-                stroke_color=stroke_color,
-                stroke_width=stroke_width,
-                size=clip_size,
-                method='caption'
-            ).set_position('center').set_start(caption['start'] + i * duration_per_word).set_duration(duration_per_word)
-            clips.append(preceding_clip)
-        
-        # Create the clip for the last word
-        last_word_clip = TextClip(
-            words[i],
+        current_text = " ".join(words[:i + 1])
+        word_clip = TextClip(
+            current_text,
             font=font_path,
-            fontsize=emphasis_fontsize,
-            color=emphasis_color,
+            fontsize=fontsize,
+            color=color,
             stroke_color=stroke_color,
             stroke_width=stroke_width,
             size=clip_size,
             method='caption'
         ).set_position('center').set_start(caption['start'] + i * duration_per_word).set_duration(duration_per_word)
-        clips.append(last_word_clip)
+        clips.append(word_clip)
 
     return clips
 
 def filter_and_resize_images(image_paths):
     valid_images = []
     for image_path in image_paths:
-        with Image.open(image_path) as img:
-            print(f"Checking image {image_path} with resolution ({img.width}x{img.height})", flush=True)
-            if img.width >= 540 and img.height >= 540 and img.width != 800 and img.height != 800:  # Engadget's logo sometimes appears as 800x800
-                valid_images.append(image_path)
+        try:
+            with Image.open(image_path) as img:
+                print(f"Checking image {image_path} with resolution ({img.width}x{img.height})", flush=True)
+                if img.width >= 540 and img.height >= 540 and img.width != 800 and img.height != 800:  # Engadget's logo sometimes appears as 800x800
+                    valid_images.append(image_path)
+        except UnidentifiedImageError:
+            print(f"UnidentifiedImageError: cannot identify image file '{image_path}'", flush=True)
+            continue
     
     if len(valid_images) > 3:
         valid_images = random.sample(valid_images, 3)
@@ -106,31 +74,13 @@ def filter_and_resize_images(image_paths):
     resized_clips = []
     for image_path in valid_images:
         clip = ImageClip(image_path).resize(width=1080)
-        # Ensure the image has three channels (RGB)
-        if clip.img.ndim == 2:  # If the image is grayscale, convert to RGB
-            clip = clip.fl_image(lambda img: np.stack([img] * 3, axis=-1))
-        elif clip.img.shape[-1] == 1:  # Another grayscale check for single-channel images
-            clip = clip.fl_image(lambda img: np.concatenate([img] * 3, axis=-1))
         if clip.h < 1920:
-            top_margin = (1920 - clip.h) // 2
-            bottom_margin = 1920 - clip.h - top_margin
-            clip = clip.margin(top=top_margin, bottom=bottom_margin, color=(0, 0, 0))
+            clip = clip.margin(top=(1920 - clip.h) // 2, bottom=(1920 - clip.h) // 2, color=(0, 0, 0))
         clip = clip.set_position(("center", "center"))
         clip = clip.fx(vfx.resize, lambda t: 1 + 0.03 * t)  # Apply a mild zoom effect
         resized_clips.append(clip.set_duration(5))  # Set each image clip to 5 seconds duration
     
     return resized_clips
-
-
-def generate_silence(duration, fps=44100):
-    # Create an array of zeros representing silence
-    silent_array = [0] * int(duration * fps)
-    
-    def make_frame(t):
-        return silent_array
-    
-    return AudioClip(make_frame, duration=duration, fps=fps)
-
 
 def generate_video(topic, date_string, start_from):
     csv_path = f'output/{date_string}/{topic}/{topic}_{date_string}.csv'
@@ -241,7 +191,7 @@ def generate_video(topic, date_string, start_from):
 
         # Write the final video with limited threads to avoid CPU overuse
         output_file = os.path.join(video_output_dir, f"video_file_{i + 1}.mp4")
-        final_video.write_videofile(output_file, fps=30, codec='libx264', audio_codec='aac', temp_audiofile='temp-audio.m4a', remove_temp=True, threads=8, preset='ultrafast')
+        final_video.write_videofile(output_file, fps=30, codec='libx264', audio_codec='aac', temp_audiofile='temp-audio.m4a', remove_temp=True, threads=4, preset='fast')
         #final_video.write_videofile(output_file, fps=30, codec='hevc_nvenc', audio_codec='aac', temp_audiofile='temp-audio.m4a', remove_temp=True, threads=4, preset='fast')
 
 

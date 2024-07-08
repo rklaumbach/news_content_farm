@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 from openai import OpenAI
 
-def generate_tts(topic, csv_file, client, custom_date=None):
+def generate_tts(topic, csv_file, client, custom_date=None, start_from=1):
     ds = custom_date if custom_date else datetime.now().strftime('%Y-%m-%d')
     if not csv_file:
         # Automatically infer the most recent CSV file path
@@ -27,11 +27,13 @@ def generate_tts(topic, csv_file, client, custom_date=None):
 
     with open(csv_file_path, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
-        for i, row in enumerate(reader):
+        for i, row in enumerate(reader, start=1):
+            if i < start_from:
+                continue
             hook = row['Hook']
             tldr = row['TLDR']
             full_text = f"{hook} {tldr}"
-            file_name = os.path.join(tts_output_dir, f"tts_file_{i+1}.mp3")
+            file_name = os.path.join(tts_output_dir, f"tts_file_{i}.mp3")
 
             response = client.audio.speech.create(
                 model="tts-1-hd",

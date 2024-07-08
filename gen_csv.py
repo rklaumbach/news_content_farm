@@ -52,9 +52,10 @@ def generate_hook_and_tldr(article, client):
     - Hook: An enticing, stimulating, engaging, concise text to grab the viewer's attention. Avoid filler words.
     - TLDR: A brief, but comprehensive summary of the article in a few sentences. Fully summarize the article content in a concise, yet engaging manner.
         Roughly 60 - 75 words or 30 - 40 seconds of speech.
-        End with a question directed at viewers or a cliffhanger relevant to the article, which you suggest they read more about. 
         Mention the article link is in the description.
-        Include call to action, a suggestion for viewers to like, comment, and follow for more news.
+        End with a question directed at viewers or a cliffhanger relevant to the article, which you suggest they read more about.
+        DO NOT duplicate the Title or Hook in the TLDR summary
+        DO NOT include call to action, a suggestion for viewers to like, comment, and follow for more news.
 
     Title: {title}
     Content: {content}
